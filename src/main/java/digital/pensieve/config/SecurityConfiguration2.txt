@@ -1,0 +1,109 @@
+package digital.pensieve.config;
+
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
+import org.springframework.security.web.csrf.CsrfToken;
+import org.springframework.security.web.util.matcher.RequestMatcher;
+import org.springframework.web.filter.OncePerRequestFilter;
+
+import java.io.IOException;
+
+@Configuration
+@EnableWebSecurity
+public class SecurityConfiguration2 {
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        http.csrf((csrf) -> csrf
+                .requireCsrfProtectionMatcher(new RequestMatcher() {
+                    @Override
+                    public boolean matches(HttpServletRequest request) {
+                        return "OPTIONS".equals(request.getMethod());
+                    }
+                })
+                .disable()
+        ).addFilterAfter(new CsrfCookieFilter(), BasicAuthenticationFilter.class);
+
+        return http.build();
+//        return http.csrf(c -> c.csrfTokenRepository(new CustomCsrfRepository())).build();
+//        return http.csrf(AbstractHttpConfigurer::disable).build();
+    }
+    class CsrfCookieFilter extends OncePerRequestFilter {
+
+        @Override
+        protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+                throws ServletException, IOException {
+            CsrfToken csrfToken = (CsrfToken) request.getAttribute(CsrfToken.class.getName());
+            // Render the token value to a cookie by causing the deferred token to be loaded
+            csrfToken.getToken();
+
+            filterChain.doFilter(request, response);
+        }
+
+    }
+//    @Bean
+//    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+//        CookieCsrfTokenRepository tokenRepository = CookieCsrfTokenRepository.withHttpOnlyFalse();
+//        XorCsrfTokenRequestAttributeHandler delegate = new XorCsrfTokenRequestAttributeHandler();
+//        // set the name of the attribute the CsrfToken will be populated on
+//        delegate.setCsrfRequestAttributeName("_csrf");
+//        // Use only the handle() method of XorCsrfTokenRequestAttributeHandler and the
+//        // default implementation of resolveCsrfTokenValue() from CsrfTokenRequestHandler
+//        CsrfTokenRequestHandler requestHandler = delegate::handle;
+//        http
+//                // ...
+//                .csrf((csrf) -> csrf
+//                        .csrfTokenRepository(tokenRepository)
+//                        .csrfTokenRequestHandler(requestHandler)
+//                ).addFilterAfter(new CsrfCookieFilter(), BasicAuthenticationFilter.class);
+//
+//        return http.build();
+//    }
+
+
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        http.csrf().disable();
+        return http.build();
+    }
+
+
+    @Bean
+    RestTemplate restTemplate() throws Exception {
+        SSLContext sslContext = new SSLContextBuilder()
+                .loadTrustMaterial(trustStore.getURL(), trustStorePassword.toCharArray())
+                .build();
+        SSLConnectionSocketFactory socketFactory = new SSLConnectionSocketFactory(sslContext);
+        HttpClient httpClient = HttpClients.custom()
+                .setSSLSocketFactory(socketFactory)
+                .build();
+        HttpComponentsClientHttpRequestFactory factory =
+                new HttpComponentsClientHttpRequestFactory(httpClient);
+        return new RestTemplate(factory);
+    }
+
+
+}
+
+
+//
+//final class CsrfCookieFilter extends OncePerRequestFilter {
+//
+//    @Override
+//    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+//            throws ServletException, IOException {
+//        CsrfToken csrfToken = (CsrfToken) request.getAttribute(CsrfToken.class.getName());
+//        // Render the token value to a cookie by causing the deferred token to be loaded
+//        csrfToken.getToken();
+//
+//        filterChain.doFilter(request, response);
+//    }
+//
+//}
